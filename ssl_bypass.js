@@ -4,14 +4,15 @@
 
 // Variables
 var SSL_VERIFY_NONE = 0;
-var ssl_ctx_set_custom_verify;
+var SSL_set_custom_verify;
 var ssl_get_psk_identity;
 
-/* Create SSL_CTX_set_custom_verify NativeFunction 
+
+/* Create SSL_set_custom_verify NativeFunction 
 *  Function signature https://github.com/google/boringssl/blob/7540cc2ec0a5c29306ed852483f833c61eddf133/include/openssl/ssl.h#L2294
 */
-ssl_ctx_set_custom_verify = new NativeFunction(
-	Module.findExportByName("libboringssl.dylib", "SSL_CTX_set_custom_verify"),
+SSL_set_custom_verify = new NativeFunction(
+	Module.findExportByName("libssl.so", "SSL_set_custom_verify"),
 	'void', ['pointer', 'int', 'pointer']
 );
 
@@ -19,11 +20,11 @@ ssl_ctx_set_custom_verify = new NativeFunction(
 * Function signature https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_get_psk_identity
 */
 ssl_get_psk_identity = new NativeFunction(
-	Module.findExportByName("libboringssl.dylib", "SSL_get_psk_identity"),
+	Module.findExportByName("libssl.so", "SSL_get_psk_identity"),
 	'pointer', ['pointer']
 );
 
-/** Custom callback passed to SSL_CTX_set_custom_verify */
+/** Custom callback passed to SSL_set_custom_verify */
 function custom_verify_callback_that_does_not_validate(ssl, out_alert){
 	return SSL_VERIFY_NONE;
 }
@@ -37,9 +38,10 @@ var ssl_verify_result_t = new NativeCallback(function (ssl, out_alert){
 function bypassSSL(){
 	console.log("[+] Bypass successfully loaded ");
 
-	Interceptor.replace(ssl_ctx_set_custom_verify, new NativeCallback(function(ssl, mode, callback) {
+	Interceptor.replace(SSL_set_custom_verify, new NativeCallback(function(ssl, mode, callback) {
 		//  |callback| performs the certificate verification. Replace this with our custom callback
-		ssl_ctx_set_custom_verify(ssl, mode, ssl_verify_result_t);
+		SSL_set_custom_verify(ssl, mode, ssl_verify_result_t);
+        console.log("[++]")
 	}, 'void', ['pointer', 'int', 'pointer']));
 
 	Interceptor.replace(ssl_get_psk_identity, new NativeCallback(function(ssl) {
