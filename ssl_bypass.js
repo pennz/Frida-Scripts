@@ -4,15 +4,19 @@
 
 // Variables
 var SSL_VERIFY_NONE = 0;
-var SSL_set_custom_verify;
+var ssl_ctx_set_custom_verify;
 var ssl_get_psk_identity;
 
-
-/* Create SSL_set_custom_verify NativeFunction 
+/* Create SSL_CTX_set_custom_verify NativeFunction 
 *  Function signature https://github.com/google/boringssl/blob/7540cc2ec0a5c29306ed852483f833c61eddf133/include/openssl/ssl.h#L2294
 */
-SSL_set_custom_verify = new NativeFunction(
+var SSL_set_custom_verify = new NativeFunction(
 	Module.findExportByName("libssl.so", "SSL_set_custom_verify"),
+	'void', ['pointer', 'int', 'pointer']
+);
+
+ssl_ctx_set_custom_verify = new NativeFunction(
+	Module.findExportByName("libssl.so", "SSL_CTX_set_custom_verify"),
 	'void', ['pointer', 'int', 'pointer']
 );
 
@@ -24,7 +28,7 @@ ssl_get_psk_identity = new NativeFunction(
 	'pointer', ['pointer']
 );
 
-/** Custom callback passed to SSL_set_custom_verify */
+/** Custom callback passed to SSL_CTX_set_custom_verify */
 function custom_verify_callback_that_does_not_validate(ssl, out_alert){
 	return SSL_VERIFY_NONE;
 }
@@ -41,7 +45,12 @@ function bypassSSL(){
 	Interceptor.replace(SSL_set_custom_verify, new NativeCallback(function(ssl, mode, callback) {
 		//  |callback| performs the certificate verification. Replace this with our custom callback
 		SSL_set_custom_verify(ssl, mode, ssl_verify_result_t);
-        console.log("[++]")
+        console.log("[++] ssl")
+	}, 'void', ['pointer', 'int', 'pointer']));
+	Interceptor.replace(ssl_ctx_set_custom_verify, new NativeCallback(function(crt, mode, callback) {
+		//  |callback| performs the certificate verification. Replace this with our custom callback
+		ssl_ctx_set_custom_verify(crt, mode, ssl_verify_result_t);
+        console.log("[++] ctx")
 	}, 'void', ['pointer', 'int', 'pointer']));
 
 	Interceptor.replace(ssl_get_psk_identity, new NativeCallback(function(ssl) {
